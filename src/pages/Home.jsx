@@ -520,7 +520,7 @@ export default function Home() {
               <div className="cta-row" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 32 }}>
                 <div>
                   <p style={{ fontFamily: "'Sora',sans-serif", fontWeight: 700, fontSize: "clamp(22px,3.5vw,34px)", color: "#fff", letterSpacing: "-.02em", lineHeight: 1.2 }}>
-                    Pronta para começar?
+                    Pronto(a) para começar?
                   </p>
                   <p style={{ marginTop: 10, color: "rgba(255,255,255,.75)", fontSize: 15 }}>
                     Acesse o sistema e teste o painel em poucos minutos.
