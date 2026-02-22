@@ -1,0 +1,8 @@
+/* Tailwind v4 (via @tailwindcss/postcss) */
+@import "tailwindcss";
+
+:root { color-scheme: light; }
+body { background: #6cb1f7; }
+
+/* Pequenos ajustes globais */
+* { -webkit-tap-highlight-color: transparent; }
