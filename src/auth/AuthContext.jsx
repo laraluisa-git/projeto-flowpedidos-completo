@@ -50,12 +50,6 @@ export function AuthProvider({ children }) {
         }
       },
 
-      // ✅ agora aceita um payload completo (bate com sua tabela usuarios)
-      // payload esperado:
-      // {
-      //   nome, email, senha,
-      //   endereco, tipoConta, nomeEmpresa
-      // }
       async register(payload) {
         setLoading(true);
         try {
