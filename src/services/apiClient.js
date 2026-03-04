@@ -1,4 +1,4 @@
-const API_BASE = "/api";
+const API_BASE = "https://projeto-flowpedidos-api.onrender.com/api";
 
 function getToken() {
   return localStorage.getItem("token");
