@@ -6,8 +6,7 @@ import { v4 as uuidv4 } from 'uuid';
 
 const router = express.Router();
 
-// Front usa: { name, category, stockQty, minStockQty, unitPrice, isActive }
-// Banco usa: { nome, categoria, stockQty, minStockQty, unitPrice, isActive, user_id, criadoEm, atualizadoEm }
+// Schema de Validação (Zod)
 const produtoSchema = z.object({
   name: z.string().min(2).optional(),
   nome: z.string().min(2).optional(),
@@ -19,13 +18,14 @@ const produtoSchema = z.object({
   isActive: z.coerce.boolean().optional(),
 }).refine(v => (v.name || v.nome), { message: 'Campo obrigatório: name/nome' });
 
+// Função de Mapeamento (Adapta Front-end -> Banco de Dados)
 function mapProduto(body) {
   return {
     nome: body.nome ?? body.name,
     categoria: body.categoria ?? body.category ?? null,
-    unit_price: Number(body.unitPrice || body.unit_price),
-    stock_qty: Number(body.stockQty || body.stock_qty),
-    min_stock_qty: Number(body.minStockQty || body.min_stock_qty),
+    unit_price: Number(body.unitPrice), 
+    stock_qty: Number(body.stockQty),   
+    min_stock_qty: Number(body.minStockQty),
     is_active: typeof body.isActive === 'boolean' ? body.isActive : true,
   };
 }
@@ -35,7 +35,7 @@ router.get('/', verificarToken, async (req, res) => {
   try {
     let query = supabase.from('produtos').select('*');
 
-    // Mudança para req.user para evitar o erro de undefined
+    // Admin vê tudo, usuário comum vê apenas o que criou
     if (req.user.role !== 'admin') {
       query = query.eq('user_id', req.user.id);
     }
@@ -53,15 +53,16 @@ router.post('/', verificarToken, async (req, res) => {
   try {
     const validated = produtoSchema.parse(req.body);
     const mapped = mapProduto(validated);
+    const agora = Date.now();
 
     const { data, error } = await supabase
       .from('produtos')
       .insert([{
         id: uuidv4(),
         ...mapped,
-        user_id: req.user.id, // Corrigido para req.user
-        criadoEm: Date.now(),
-        atualizadoEm: Date.now(),
+        user_id: req.user.id,
+        criadoEm: agora,
+        atualizadoEm: agora,
       }])
       .select().single();
 
@@ -71,21 +72,29 @@ router.post('/', verificarToken, async (req, res) => {
     if (error instanceof z.ZodError) {
       return res.status(400).json({ errors: error.issues.map(e => e.message) });
     }
-    console.error({ error: 'Erro ao criar produto', message: error.message })
+    console.error('Erro ao criar produto:', error.message);
     res.status(500).json({ error: 'Erro ao criar produto', message: error.message });
   }
 });
 
-// PUT /api/produtos/:id (editar)
+// PUT /api/produtos/:id
 router.put('/:id', verificarToken, async (req, res) => {
   try {
     const { id } = req.params;
     const validated = produtoSchema.partial().parse(req.body);
     const mapped = mapProduto(validated);
 
-    // isolamento (admin vê todos)
-    let q = supabase.from('produtos').update({ ...mapped, atualizadoEm: new Date().toISOString() }).eq('id', id);
-    if (req.user.role !== 'admin') q = q.eq('user_id', req.user.id);
+    let q = supabase
+      .from('produtos')
+      .update({ 
+        ...mapped, 
+        atualizadoEm: Date.now() // Mantendo o padrão bigint/ms
+      })
+      .eq('id', id);
+
+    if (req.user.role !== 'admin') {
+      q = q.eq('user_id', req.user.id);
+    }
 
     const { data, error } = await q.select().single();
     if (error) throw error;
@@ -104,12 +113,16 @@ router.delete('/:id', verificarToken, async (req, res) => {
   try {
     const { id } = req.params;
     let q = supabase.from('produtos').delete().eq('id', id);
-    if (req.user.role !== 'admin') q = q.eq('user_id', req.user.id);
+
+    if (req.user.role !== 'admin') {
+      q = q.eq('user_id', req.user.id);
+    }
 
     const { data, error } = await q.select();
     if (error) throw error;
-    if (!data || data.length === 0) return res.status(404).json({ error: 'Produto não encontrado.' });
-    res.status(200).json({ mensagem: 'Produto removido.' });
+    if (!data || data.length === 0) return res.status(404).json({ error: 'Produto não encontrado ou sem permissão.' });
+    
+    res.status(200).json({ mensagem: 'Produto removido com sucesso.' });
   } catch (error) {
     res.status(500).json({ error: 'Erro ao remover produto', message: error.message });
   }
