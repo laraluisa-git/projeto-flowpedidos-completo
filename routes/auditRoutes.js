@@ -10,7 +10,7 @@ router.get('/', verificarToken, async (req, res) => {
     const { id: userId, role } = req.user;
 
     let q = supabase.from('auditoria').select('*');
-    if (role !== 'admin') q = q.eq('usuarioId', userId);
+    if (role !== 'admin') q = q.eq('user_id', userId);
 
     const { data, error } = await q.order('criadoEm', { ascending: false }).limit(200);
     if (error) throw error;

@@ -10,16 +10,16 @@ router.get('/', verificarToken, async (req, res) => {
     const isAdmin = req.user.role === 'admin';
 
     // 1. Consulta Produtos (Ajustado para unitPrice e stockQty)
-    let queryProd = supabase.from('produtos').select('stockQty, unitPrice');
+    let queryProd = supabase.from('produtos').select('stock_qty, unit_price');
     if (!isAdmin) queryProd = queryProd.eq('user_id', userId);
     
     const { data: produtos, error: errProd } = await queryProd;
     if (errProd) throw errProd;
 
-    const totalEstoqueValor = produtos.reduce((acc, p) => acc + (p.stockQty * p.unitPrice), 0);
+    const totalEstoqueValor = produtos.reduce((acc, p) => acc + (p.stock_qty * p.unit_price), 0);
 
     // 2. Consulta Pedidos
-    let queryPed = supabase.from('pedidos').select('status, quantity, produtos(unitPrice)');
+    let queryPed = supabase.from('pedidos').select('status, quantidade, produtos(unit_price)');
     if (!isAdmin) queryPed = queryPed.eq('user_id', userId);
     
     const { data: pedidos, error: errPed } = await queryPed;

@@ -48,7 +48,22 @@ router.get('/', verificarToken, async (req, res) => {
     const { data: pedidos, error } = await query.order('criadoEm', { ascending: false });
 
     if (error) throw error;
-    res.status(200).json(pedidos ?? []);
+
+    // Mapeia snake_case (banco) para camelCase (frontend)
+    const pedidosFormatados = (pedidos ?? []).map(p => ({
+      id: p.id,
+      customerName: p.cliente_nome,
+      deliveryAddress: p.endereco_entrega,
+      productId: p.produto_id,
+      productName: p.produtos?.nome,
+      quantity: p.quantidade,
+      priority: p.priority,
+      status: p.status,
+      criadoEm: p.criadoEm,
+      entregaEm: p.entrega_em
+    }));
+
+    res.status(200).json(pedidosFormatados);
   } catch (error) {
     res.status(500).json({ error: 'Erro ao buscar pedidos', details: error.message });
   }
