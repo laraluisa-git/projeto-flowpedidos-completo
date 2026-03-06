@@ -18,6 +18,12 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// Middleware de Log de Requisições
+app.use((req, res, next) => {
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.originalUrl}`);
+  next();
+});
+
 // =========================
 // Rotas API
 // =========================

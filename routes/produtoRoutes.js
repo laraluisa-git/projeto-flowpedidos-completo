@@ -67,6 +67,8 @@ router.post('/', verificarToken, async (req, res) => {
       .select().single();
 
     if (error) throw error;
+    console.log(`[PRODUTO] Criado: ${mapped.nome} (ID: ${data.id})`);
+    
     res.status(201).json(data);
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -99,6 +101,8 @@ router.put('/:id', verificarToken, async (req, res) => {
     const { data, error } = await q.select().single();
     if (error) throw error;
     if (!data) return res.status(404).json({ error: 'Produto não encontrado.' });
+    
+    console.log(`[PRODUTO] Atualizado: ${id}`);
     res.status(200).json(data);
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -122,6 +126,7 @@ router.delete('/:id', verificarToken, async (req, res) => {
     if (error) throw error;
     if (!data || data.length === 0) return res.status(404).json({ error: 'Produto não encontrado ou sem permissão.' });
     
+    console.log(`[PRODUTO] Removido: ${id}`);
     res.status(200).json({ mensagem: 'Produto removido com sucesso.' });
   } catch (error) {
     res.status(500).json({ error: 'Erro ao remover produto', message: error.message });

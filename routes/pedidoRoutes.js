@@ -87,6 +87,7 @@ router.post('/', verificarToken, async (req, res) => {
 
     // 2) Verifica estoque
     if (produto.stock_qty < payload.quantidade) {
+      console.warn(`[PEDIDO] Estoque insuficiente. Prod: ${payload.produto_id}, Req: ${payload.quantidade}, Disp: ${produto.stock_qty}`);
       return res.status(422).json({ 
         error: `Estoque insuficiente. Disponível: ${produto.stock_qty}` 
       });
@@ -111,6 +112,8 @@ router.post('/', verificarToken, async (req, res) => {
       .eq('id', payload.produto_id);
 
     if (estoqueError) throw estoqueError;
+
+    console.log(`[PEDIDO] Criado com sucesso: ${novoPedido.id} | Cliente: ${novoPedido.cliente_nome}`);
 
     res.status(201).json({ pedido: novoPedido });
   } catch (error) {
@@ -170,6 +173,8 @@ router.put('/:id', verificarToken, async (req, res) => {
     const { data: atualizado, error: errUpdate } = await supabase.from('pedidos').update(updateData).eq('id', id).select().single();
     if (errUpdate) throw errUpdate;
     
+    console.log(`[PEDIDO] Atualizado: ${id} | Status: ${updateData.status || 'mantido'} | Qtd: ${updateData.quantidade || 'mantida'}`);
+
     res.json(atualizado);
   } catch (error) {
     res.status(500).json({ error: 'Erro ao atualizar pedido', details: error.message });
@@ -200,6 +205,8 @@ router.delete('/:id', verificarToken, async (req, res) => {
     // 3. Remove pedido
     const { error: errDel } = await supabase.from('pedidos').delete().eq('id', id);
     if (errDel) throw errDel;
+
+    console.log(`[PEDIDO] Excluído: ${id} | Estoque estornado: ${pedido.quantidade}`);
 
     res.status(200).json({ message: 'Pedido excluído com sucesso.' });
   } catch (error) {
