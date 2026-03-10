@@ -10,16 +10,21 @@ router.get('/', verificarToken, async (req, res) => {
     const isAdmin = req.user.role === 'admin';
 
     // 1. Consulta Produtos (Ajustado para unitPrice e stockQty)
-    let queryProd = supabase.from('produtos').select('stockQty, unitPrice');
+    let queryProd = supabase.from('produtos').select('stock_qty, unit_price');
     if (!isAdmin) queryProd = queryProd.eq('user_id', userId);
     
     const { data: produtos, error: errProd } = await queryProd;
     if (errProd) throw errProd;
 
-    const totalEstoqueValor = produtos.reduce((acc, p) => acc + (p.stockQty * p.unitPrice), 0);
+    // Garante que os valores sejam números e trata nulos
+    const totalEstoqueValor = (produtos || []).reduce((acc, p) => {
+      const qty = Number(p.stock_qty) || 0;
+      const price = Number(p.unit_price) || 0;
+      return acc + (qty * price);
+    }, 0);
 
-    // 2. Consulta Pedidos
-    let queryPed = supabase.from('pedidos').select('status, quantity, produtos(unitPrice)');
+    // 2. Consulta Pedidos (Apenas status é necessário para as contagens)
+    let queryPed = supabase.from('pedidos').select('status');
     if (!isAdmin) queryPed = queryPed.eq('user_id', userId);
     
     const { data: pedidos, error: errPed } = await queryPed;
@@ -29,7 +34,13 @@ router.get('/', verificarToken, async (req, res) => {
       totalPedidos: pedidos.length,
       confirmados: pedidos.filter(p => p.status === 'confirmado').length,
       entregues: pedidos.filter(p => p.status === 'entregue').length,
-      valorTotalEstoque: totalEstoqueValor.toFixed(2)
+      valorTotalEstoque: totalEstoqueValor.toFixed(2),
+      
+      // Adicionando chaves em inglês (camelCase) para compatibilidade com o frontend
+      totalOrders: pedidos.length,
+      confirmedOrders: pedidos.filter(p => p.status === 'confirmado').length,
+      deliveredOrders: pedidos.filter(p => p.status === 'entregue').length,
+      totalStockValue: totalEstoqueValor.toFixed(2)
     };
 
     res.status(200).json(stats);

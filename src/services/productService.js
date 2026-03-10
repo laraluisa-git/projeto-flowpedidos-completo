@@ -7,11 +7,12 @@ export async function listProducts() {
     id: p.id,
     name: p.nome,
     category: p.categoria ?? "",
-    stockQty: p.stockQty ?? 0,
-    minStockQty: p.minStockQty ?? 0,
-    unitPrice: p.unitPrice ?? 0,
-    isActive: p.isActive !== false,
+    stockQty: p.stock_qty ?? 0,
+    minStockQty: p.min_stock_qty ?? 0,
+    unitPrice: p.unit_price ?? 0,
+    isActive: p.is_active !== false,
     criadoEm: p.criadoEm,
+    createdAt: p.criadoEm || p.criadoem,
     atualizadoEm: p.atualizadoEm,
   }));
 }

@@ -36,7 +36,7 @@ const registerSchema = z.object({
 
 // Login
 const loginSchema = z.object({
-  email: z.string().email(),
+  email: z.email(),
   password: z.string().min(1).optional(),
   senha: z.string().min(1).optional(),
 }).refine((v) => (v.password || v.senha), { message: 'Senha é obrigatória.' });
@@ -97,6 +97,8 @@ router.post('/register', async (req, res) => {
       { expiresIn: '2h' }
     );
 
+    console.log(`[AUTH] Novo usuário registrado: ${newUser.email} (ID: ${newUser.id})`);
+
     return res.status(201).json({
       token,
       usuario: { id: newUser.id, name: newUser.nome, email: newUser.email, role: newUser.role }
@@ -123,16 +125,24 @@ router.post('/login', async (req, res) => {
       .maybeSingle();
 
     if (error) throw error;
-    if (!user) return res.status(401).json({ error: 'Email ou senha inválidos.' });
+    if (!user) {
+      console.warn(`[AUTH] Falha de login (usuário não encontrado): ${validated.email}`);
+      return res.status(401).json({ error: 'Email ou senha inválidos.' });
+    }
 
     const ok = await bcrypt.compare(password, user.senhaHash);
-    if (!ok) return res.status(401).json({ error: 'Email ou senha inválidos.' });
+    if (!ok) {
+      console.warn(`[AUTH] Falha de login (senha incorreta): ${validated.email}`);
+      return res.status(401).json({ error: 'Email ou senha inválidos.' });
+    }
 
     const token = jwt.sign(
       { id: user.id, role: user.role },
       process.env.JWT_SECRET || 'dev_secret_change_me',
       { expiresIn: '1d' }
     );
+
+    console.log(`[AUTH] Login realizado: ${user.email} (Role: ${user.role})`);
 
     return res.status(200).json({
       token,

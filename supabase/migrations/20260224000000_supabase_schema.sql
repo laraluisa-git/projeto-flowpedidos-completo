@@ -1,3 +1,4 @@
+
 create table if not exists usuarios (
   id text primary key,
   nome text not null,
@@ -44,11 +45,3 @@ create table if not exists membros_equipe (
   links text not null default '',
   "createdAt" bigint not null default (extract(epoch from now()) * 1000)::bigint
 );
-
--- Seed (ADMIN + exemplos do front)
--- Senha do admin no front: admin123
--- Gere o hash com bcrypt e substitua abaixo, ou use o script de seed que eu deixei no README.
--- Aqui vai um hash bcrypt de exemplo para "admin123" (pode variar):
--- $2a$10$5KQm8t8a6X0e4tFZr3LkOeG5pK4c3h0W8cQ1rC5xTzKxvZb5xgEoW
--- Recomendo gerar novamente no seu ambiente.
-

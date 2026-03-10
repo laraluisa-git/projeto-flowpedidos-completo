@@ -39,7 +39,7 @@ router.get('/', verificarToken, async (req, res) => {
       name: m.nome,
       role: m.funcao,
       links: m.links ?? '',
-      createdAt: m.criadoEm,
+      createdAt: m.criadoEm || m.criadoem, // Fallback para minúsculo
     })));
   } catch (error) {
     res.status(500).json({ error: 'Erro ao buscar membros da equipe', details: error.message });
@@ -66,7 +66,7 @@ router.post('/', verificarToken, verificarAdmin, async (req, res) => {
         name: novoMembro.nome,
         role: novoMembro.funcao,
         links: novoMembro.links ?? '',
-        createdAt: novoMembro.criadoEm,
+        createdAt: novoMembro.criadoEm || novoMembro.criadoem,
       }
     });
   } catch (error) {
@@ -103,7 +103,7 @@ router.put('/:id', verificarToken, verificarAdmin, async (req, res) => {
         name: membroAtualizado.nome,
         role: membroAtualizado.funcao,
         links: membroAtualizado.links ?? '',
-        createdAt: membroAtualizado.criadoEm,
+        createdAt: membroAtualizado.criadoEm || membroAtualizado.criadoem,
       }
     });
   } catch (error) {
