@@ -1,4 +1,12 @@
 // routes/pedidoRoutes.js
+
+/**
+ * @swagger
+ * tags:
+ *   name: Pedidos
+ *   description: Gerenciamento de pedidos com controle de estoque
+ */
+
 import express from 'express';
 import { z } from 'zod';
 import supabase from '../config/supabase.js';
@@ -31,6 +39,37 @@ function mapPedidoInsert(body, userId) {
   };
 }
 
+/**
+ * @swagger
+ * /api/pedidos:
+ *   get:
+ *     summary: Listar pedidos
+ *     description: Retorna todos os pedidos. Admin vê todos; usuário comum vê apenas os seus.
+ *     tags: [Pedidos]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Lista de pedidos retornada com sucesso.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/Pedido'
+ *       401:
+ *         description: Token ausente ou inválido.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErroGenerico'
+ *       500:
+ *         description: Erro interno no servidor.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErroGenerico'
+ */
 // GET /api/pedidos
 router.get('/', verificarToken, async (req, res) => {
   try {
@@ -70,6 +109,62 @@ router.get('/', verificarToken, async (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /api/pedidos:
+ *   post:
+ *     summary: Criar pedido
+ *     description: Cria um novo pedido e deduz automaticamente a quantidade do estoque do produto.
+ *     tags: [Pedidos]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/PedidoInput'
+ *     responses:
+ *       201:
+ *         description: Pedido criado com sucesso.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 pedido:
+ *                   $ref: '#/components/schemas/Pedido'
+ *       400:
+ *         description: Dados inválidos.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErroValidacao'
+ *       401:
+ *         description: Token ausente ou inválido.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErroGenerico'
+ *       404:
+ *         description: Produto não encontrado.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErroGenerico'
+ *       422:
+ *         description: Estoque insuficiente para a quantidade solicitada.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErroGenerico'
+ *       500:
+ *         description: Erro interno no servidor.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErroGenerico'
+ */
 // POST /api/pedidos - COM BAIXA DE ESTOQUE
 router.post('/', verificarToken, async (req, res) => {
   try {
@@ -125,6 +220,66 @@ router.post('/', verificarToken, async (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /api/pedidos/{id}:
+ *   put:
+ *     summary: Atualizar pedido
+ *     description: Atualiza status, quantidade ou outros campos do pedido. Ajusta o estoque automaticamente se a quantidade mudar.
+ *     tags: [Pedidos]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID do pedido
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/PedidoInput'
+ *     responses:
+ *       200:
+ *         description: Pedido atualizado com sucesso.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Pedido'
+ *       401:
+ *         description: Token ausente ou inválido.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErroGenerico'
+ *       403:
+ *         description: Sem permissão para editar este pedido.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErroGenerico'
+ *       404:
+ *         description: Pedido não encontrado.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErroGenerico'
+ *       422:
+ *         description: Estoque insuficiente para a nova quantidade.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErroGenerico'
+ *       500:
+ *         description: Erro interno no servidor.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErroGenerico'
+ */
 // PUT /api/pedidos/:id - Atualizar pedido (Status ou Quantidade com ajuste de estoque)
 router.put('/:id', verificarToken, async (req, res) => {
   try {
@@ -182,6 +337,54 @@ router.put('/:id', verificarToken, async (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /api/pedidos/{id}:
+ *   delete:
+ *     summary: Excluir pedido
+ *     description: Remove o pedido e estorna automaticamente a quantidade ao estoque do produto.
+ *     tags: [Pedidos]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID do pedido
+ *     responses:
+ *       200:
+ *         description: Pedido excluído com sucesso.
+ *         content:
+ *           application/json:
+ *             example:
+ *               message: Pedido excluído com sucesso.
+ *       401:
+ *         description: Token ausente ou inválido.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErroGenerico'
+ *       403:
+ *         description: Sem permissão para excluir este pedido.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErroGenerico'
+ *       404:
+ *         description: Pedido não encontrado.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErroGenerico'
+ *       500:
+ *         description: Erro interno no servidor.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErroGenerico'
+ */
 // DELETE /api/pedidos/:id - Excluir pedido e estornar estoque
 router.delete('/:id', verificarToken, async (req, res) => {
   try {

@@ -1,0 +1,793 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "FlowPedidos API",
+    "version": "1.0.0",
+    "description": "API REST do sistema FlowPedidos — gerenciamento de pedidos, estoque, membros e auditoria.\n\n**Autenticação:** Todas as rotas (exceto `/api/auth/login` e `/api/auth/register`) exigem um **JWT Bearer Token**.\n\nObtenha o token via `POST /api/auth/login` e envie no header:\n```\nAuthorization: Bearer {token}\n```\n\n**Acesso de teste:**\n- Email: `admin@demo.com`\n- Senha: `admin123`",
+    "contact": {
+      "name": "Equipe FlowPedidos — Grupo 8",
+      "url": "https://github.com/laraluisa-git/projeto-flowpedidos"
+    }
+  },
+  "servers": [
+    {
+      "url": "https://projeto-flowpedidos-api.onrender.com",
+      "description": "Produção (Render)"
+    },
+    {
+      "url": "http://localhost:3000",
+      "description": "Desenvolvimento local"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "Token JWT obtido via POST /api/auth/login"
+      }
+    },
+    "schemas": {
+      "RegisterBody": {
+        "type": "object",
+        "required": ["nome", "email", "senha", "endereco", "tipoConta"],
+        "properties": {
+          "nome":        { "type": "string", "minLength": 2, "example": "Maria Silva" },
+          "email":       { "type": "string", "format": "email", "example": "maria@email.com" },
+          "senha":       { "type": "string", "minLength": 6, "example": "senha123" },
+          "endereco":    { "type": "string", "minLength": 5, "example": "Rua Exemplo, 123" },
+          "tipoConta":   { "type": "string", "enum": ["pf", "empresa"], "example": "pf" },
+          "nomeEmpresa": { "type": "string", "example": "" }
+        }
+      },
+      "LoginBody": {
+        "type": "object",
+        "required": ["email", "senha"],
+        "properties": {
+          "email": { "type": "string", "format": "email", "example": "admin@demo.com" },
+          "senha": { "type": "string", "example": "admin123" }
+        }
+      },
+      "AuthResponse": {
+        "type": "object",
+        "properties": {
+          "token": { "type": "string", "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." },
+          "usuario": {
+            "type": "object",
+            "properties": {
+              "id":    { "type": "string", "example": "uuid-do-usuario" },
+              "name":  { "type": "string", "example": "Admin" },
+              "email": { "type": "string", "example": "admin@demo.com" },
+              "role":  { "type": "string", "enum": ["admin", "user"], "example": "admin" }
+            }
+          }
+        }
+      },
+      "ProdutoBody": {
+        "type": "object",
+        "required": ["name", "category", "unitPrice", "stockQty", "minStockQty"],
+        "properties": {
+          "name":        { "type": "string", "minLength": 2, "example": "Cadeira Ergonômica" },
+          "category":    { "type": "string", "example": "moveis" },
+          "unitPrice":   { "type": "number", "format": "float", "minimum": 0, "example": 299.90 },
+          "stockQty":    { "type": "integer", "minimum": 0, "example": 10 },
+          "minStockQty": { "type": "integer", "minimum": 0, "example": 3 },
+          "isActive":    { "type": "boolean", "example": true }
+        }
+      },
+      "ProdutoResponse": {
+        "type": "object",
+        "properties": {
+          "id":           { "type": "string", "example": "uuid-produto" },
+          "nome":         { "type": "string", "example": "Cadeira Ergonômica" },
+          "categoria":    { "type": "string", "example": "moveis" },
+          "unit_price":   { "type": "number", "example": 299.90 },
+          "stock_qty":    { "type": "integer", "example": 10 },
+          "min_stock_qty":{ "type": "integer", "example": 3 },
+          "is_active":    { "type": "boolean", "example": true },
+          "user_id":      { "type": "string", "example": "uuid-usuario" },
+          "criadoEm":     { "type": "integer", "example": 1700000000000 },
+          "atualizadoEm": { "type": "integer", "example": 1700000000000 }
+        }
+      },
+      "PedidoBody": {
+        "type": "object",
+        "required": ["customerName", "deliveryAddress", "productId", "quantity"],
+        "properties": {
+          "customerName":    { "type": "string", "minLength": 2, "example": "João da Silva" },
+          "deliveryAddress": { "type": "string", "minLength": 5, "example": "Av. Central, 1000" },
+          "productId":       { "type": "string", "format": "uuid", "example": "uuid-do-produto" },
+          "quantity":        { "type": "integer", "minimum": 1, "example": 2 },
+          "priority":        { "type": "string", "enum": ["baixa", "media", "alta"], "example": "media" },
+          "status":          { "type": "string", "enum": ["confirmado", "em_andamento", "entregue"], "example": "confirmado" }
+        }
+      },
+      "PedidoResponse": {
+        "type": "object",
+        "properties": {
+          "id":              { "type": "string", "example": "uuid-pedido" },
+          "customerName":    { "type": "string", "example": "João da Silva" },
+          "deliveryAddress": { "type": "string", "example": "Av. Central, 1000" },
+          "productId":       { "type": "string", "example": "uuid-do-produto" },
+          "productName":     { "type": "string", "example": "Cadeira Ergonômica" },
+          "quantity":        { "type": "integer", "example": 2 },
+          "priority":        { "type": "string", "example": "media" },
+          "status":          { "type": "string", "example": "confirmado" },
+          "criadoEm":        { "type": "integer", "example": 1700000000000 },
+          "createdAt":       { "type": "integer", "example": 1700000000000 },
+          "entregaEm":       { "type": "integer", "nullable": true, "example": null }
+        }
+      },
+      "PedidoUpdateBody": {
+        "type": "object",
+        "properties": {
+          "customerName":    { "type": "string", "example": "João da Silva" },
+          "deliveryAddress": { "type": "string", "example": "Rua Nova, 55" },
+          "priority":        { "type": "string", "enum": ["baixa", "media", "alta"], "example": "alta" },
+          "status":          { "type": "string", "enum": ["confirmado", "em_andamento", "entregue"], "example": "em_andamento" },
+          "quantity":        { "type": "integer", "minimum": 1, "example": 3 }
+        }
+      },
+      "MembroBody": {
+        "type": "object",
+        "required": ["name", "role"],
+        "properties": {
+          "name":  { "type": "string", "minLength": 2, "example": "Ana Souza" },
+          "role":  { "type": "string", "minLength": 2, "example": "Front-end" },
+          "links": { "type": "string", "example": "https://github.com/ana" }
+        }
+      },
+      "MembroResponse": {
+        "type": "object",
+        "properties": {
+          "id":        { "type": "string", "example": "uuid-membro" },
+          "name":      { "type": "string", "example": "Ana Souza" },
+          "role":      { "type": "string", "example": "Front-end" },
+          "links":     { "type": "string", "example": "https://github.com/ana" },
+          "createdAt": { "type": "integer", "example": 1700000000000 }
+        }
+      },
+      "DashboardResponse": {
+        "type": "object",
+        "properties": {
+          "totalPedidos":       { "type": "integer", "example": 42 },
+          "confirmados":        { "type": "integer", "example": 10 },
+          "entregues":          { "type": "integer", "example": 30 },
+          "valorTotalEstoque":  { "type": "string", "example": "15430.00" },
+          "totalOrders":        { "type": "integer", "example": 42 },
+          "confirmedOrders":    { "type": "integer", "example": 10 },
+          "deliveredOrders":    { "type": "integer", "example": 30 },
+          "totalStockValue":    { "type": "string", "example": "15430.00" }
+        }
+      },
+      "AuditoriaItem": {
+        "type": "object",
+        "properties": {
+          "id":        { "type": "string", "example": "uuid-log" },
+          "userId":    { "type": "string", "example": "uuid-usuario" },
+          "action":    { "type": "string", "example": "CREATE_PEDIDO" },
+          "details":   { "type": "string", "example": "Pedido criado para João da Silva" },
+          "criadoEm":  { "type": "integer", "example": 1700000000000 },
+          "createdAt": { "type": "integer", "example": 1700000000000 }
+        }
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "error": { "type": "string", "example": "Mensagem de erro descritiva" }
+        }
+      },
+      "ValidationError": {
+        "type": "object",
+        "properties": {
+          "errors": {
+            "type": "array",
+            "items": { "type": "string" },
+            "example": ["Campo obrigatório ausente"]
+          }
+        }
+      }
+    },
+    "responses": {
+      "Unauthorized": {
+        "description": "Token ausente ou inválido",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/ErrorResponse" },
+            "example": { "error": "Token ausente. Faça login novamente." }
+          }
+        }
+      },
+      "Forbidden": {
+        "description": "Sem permissão de administrador",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/ErrorResponse" },
+            "example": { "error": "Acesso negado. Requer privilégios de administrador." }
+          }
+        }
+      },
+      "NotFound": {
+        "description": "Recurso não encontrado",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/ErrorResponse" },
+            "example": { "error": "Recurso não encontrado." }
+          }
+        }
+      },
+      "ServerError": {
+        "description": "Erro interno do servidor",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/ErrorResponse" },
+            "example": { "error": "Erro interno no servidor", "details": "Detalhes técnicos do erro" }
+          }
+        }
+      }
+    }
+  },
+  "security": [{ "bearerAuth": [] }],
+  "tags": [
+    { "name": "Status",    "description": "Verificação de saúde da API" },
+    { "name": "Auth",      "description": "Registro e login de usuários" },
+    { "name": "Produtos",  "description": "Gerenciamento de produtos e estoque" },
+    { "name": "Pedidos",   "description": "Gerenciamento de pedidos com controle de estoque" },
+    { "name": "Membros",   "description": "Membros da equipe (edição restrita a admins)" },
+    { "name": "Dashboard", "description": "Estatísticas e indicadores do sistema" },
+    { "name": "Auditoria", "description": "Log de ações do sistema" }
+  ],
+  "paths": {
+
+    "/api/status": {
+      "get": {
+        "tags": ["Status"],
+        "summary": "Verificar saúde da API",
+        "description": "Retorna o status da API. Não requer autenticação.",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "API funcionando normalmente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status":  { "type": "string", "example": "success" },
+                    "message": { "type": "string", "example": "API rodando no Render!" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+
+    "/api/auth/register": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Registrar novo usuário",
+        "description": "Cria uma nova conta de usuário. Retorna token JWT e dados do usuário criado.\n\nAceita tanto os campos em português (`nome`, `senha`, `endereco`, `tipoConta`) quanto em inglês (`name`, `password`, `address`, `accountType`).",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/RegisterBody" },
+              "examples": {
+                "pessoaFisica": {
+                  "summary": "Pessoa Física",
+                  "value": { "nome": "Maria Silva", "email": "maria@email.com", "senha": "senha123", "endereco": "Rua Exemplo, 123", "tipoConta": "pf" }
+                },
+                "empresa": {
+                  "summary": "Empresa",
+                  "value": { "nome": "Carlos Admin", "email": "carlos@empresa.com", "senha": "senha456", "endereco": "Av. Paulista, 1000", "tipoConta": "empresa", "nomeEmpresa": "FlowPedidos LTDA" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Usuário criado com sucesso",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/AuthResponse" }
+              }
+            }
+          },
+          "400": {
+            "description": "Dados inválidos ou e-mail já cadastrado",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ValidationError" },
+                "examples": {
+                  "emailDuplicado": { "summary": "E-mail já cadastrado", "value": { "error": "Email já cadastrado." } },
+                  "validacao":      { "summary": "Erro de validação",    "value": { "errors": ["Campo obrigatório ausente (name/email/password/address/accountType)."] } }
+                }
+              }
+            }
+          },
+          "500": { "$ref": "#/components/responses/ServerError" }
+        }
+      }
+    },
+
+    "/api/auth/login": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Fazer login",
+        "description": "Autentica o usuário e retorna um token JWT válido por 1 dia.\n\nUse o token retornado no header `Authorization: Bearer {token}` nas demais rotas.",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/LoginBody" },
+              "example": { "email": "admin@demo.com", "senha": "admin123" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Login realizado com sucesso",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/AuthResponse" }
+              }
+            }
+          },
+          "401": {
+            "description": "Credenciais inválidas",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" },
+                "example": { "error": "Email ou senha inválidos." }
+              }
+            }
+          },
+          "400": { "description": "Dados inválidos", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ValidationError" } } } },
+          "500": { "$ref": "#/components/responses/ServerError" }
+        }
+      }
+    },
+
+    "/api/produtos": {
+      "get": {
+        "tags": ["Produtos"],
+        "summary": "Listar produtos",
+        "description": "Retorna todos os produtos do usuário autenticado.\n\n**Admin** visualiza todos os produtos do sistema. **Usuário comum** visualiza apenas os seus.",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Lista de produtos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/ProdutoResponse" }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "500": { "$ref": "#/components/responses/ServerError" }
+        }
+      },
+      "post": {
+        "tags": ["Produtos"],
+        "summary": "Cadastrar produto",
+        "description": "Cria um novo produto no estoque. O `id` é gerado automaticamente via UUID.\n\nO produto fica associado ao `user_id` do usuário autenticado.",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ProdutoBody" },
+              "example": {
+                "name": "Cadeira Ergonômica",
+                "category": "moveis",
+                "unitPrice": 299.90,
+                "stockQty": 10,
+                "minStockQty": 3,
+                "isActive": true
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Produto criado com sucesso",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ProdutoResponse" }
+              }
+            }
+          },
+          "400": { "description": "Dados inválidos", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ValidationError" } } } },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "500": { "$ref": "#/components/responses/ServerError" }
+        }
+      }
+    },
+
+    "/api/produtos/{id}": {
+      "put": {
+        "tags": ["Produtos"],
+        "summary": "Atualizar produto",
+        "description": "Atualiza os dados de um produto existente. Suporta atualização parcial (apenas os campos enviados serão alterados).\n\n**Admin** pode editar qualquer produto. **Usuário comum** pode editar apenas os seus.",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "UUID do produto",
+            "schema": { "type": "string" },
+            "example": "uuid-do-produto"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ProdutoBody" },
+              "example": { "stockQty": 15, "unitPrice": 320.00 }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Produto atualizado com sucesso",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ProdutoResponse" }
+              }
+            }
+          },
+          "400": { "description": "Dados inválidos", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ValidationError" } } } },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "500": { "$ref": "#/components/responses/ServerError" }
+        }
+      },
+      "delete": {
+        "tags": ["Produtos"],
+        "summary": "Excluir produto",
+        "description": "Remove um produto do estoque.\n\n**Admin** pode excluir qualquer produto. **Usuário comum** pode excluir apenas os seus.\n\n> ⚠️ Se existir pedido vinculado ao produto, a exclusão pode falhar. Nesse caso, desative o produto (`isActive: false`).",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "UUID do produto",
+            "schema": { "type": "string" },
+            "example": "uuid-do-produto"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Produto removido com sucesso",
+            "content": {
+              "application/json": {
+                "schema": { "type": "object", "properties": { "mensagem": { "type": "string", "example": "Produto removido com sucesso." } } }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "500": { "$ref": "#/components/responses/ServerError" }
+        }
+      }
+    },
+
+    "/api/pedidos": {
+      "get": {
+        "tags": ["Pedidos"],
+        "summary": "Listar pedidos",
+        "description": "Retorna todos os pedidos com dados do produto vinculado.\n\n**Admin** visualiza todos os pedidos. **Usuário comum** visualiza apenas os seus.\n\nOrdenados por data de criação (mais recentes primeiro).",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Lista de pedidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/PedidoResponse" }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "500": { "$ref": "#/components/responses/ServerError" }
+        }
+      },
+      "post": {
+        "tags": ["Pedidos"],
+        "summary": "Criar pedido",
+        "description": "Registra um novo pedido e **debita automaticamente** a quantidade solicitada do estoque do produto.\n\n**Regras:**\n- O `productId` deve referenciar um produto existente.\n- A `quantity` não pode ser maior que o `stock_qty` disponível.\n- Se o pedido for criado com `status: entregue`, o campo `entrega_em` é preenchido automaticamente.",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/PedidoBody" },
+              "example": {
+                "customerName": "João da Silva",
+                "deliveryAddress": "Av. Central, 1000",
+                "productId": "uuid-do-produto",
+                "quantity": 2,
+                "priority": "media",
+                "status": "confirmado"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Pedido criado com sucesso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "pedido": { "$ref": "#/components/schemas/PedidoResponse" }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "description": "Dados inválidos", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ValidationError" } } } },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": {
+            "description": "Produto não encontrado",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" }, "example": { "error": "Produto não encontrado." } } }
+          },
+          "422": {
+            "description": "Estoque insuficiente",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" }, "example": { "error": "Estoque insuficiente. Disponível: 3" } } }
+          },
+          "500": { "$ref": "#/components/responses/ServerError" }
+        }
+      }
+    },
+
+    "/api/pedidos/{id}": {
+      "put": {
+        "tags": ["Pedidos"],
+        "summary": "Atualizar pedido",
+        "description": "Atualiza dados de um pedido existente.\n\n**Regras de estoque:**\n- Se a `quantity` for alterada, o estoque é ajustado automaticamente (a diferença é debitada ou estornada).\n- Não é possível aumentar a quantidade além do estoque disponível.\n\n**Regras de status:**\n- Ao definir `status: entregue`, o campo `entrega_em` é preenchido automaticamente.\n\n**Permissão:** Admin ou dono do pedido.",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "UUID do pedido",
+            "schema": { "type": "string" },
+            "example": "uuid-do-pedido"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/PedidoUpdateBody" },
+              "example": { "status": "em_andamento", "priority": "alta" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Pedido atualizado com sucesso",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/PedidoResponse" }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "422": {
+            "description": "Estoque insuficiente para nova quantidade",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } }
+          },
+          "500": { "$ref": "#/components/responses/ServerError" }
+        }
+      },
+      "delete": {
+        "tags": ["Pedidos"],
+        "summary": "Excluir pedido",
+        "description": "Remove um pedido e **estorna automaticamente** a quantidade ao estoque do produto.\n\n**Permissão:** Admin ou dono do pedido.",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "UUID do pedido",
+            "schema": { "type": "string" },
+            "example": "uuid-do-pedido"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Pedido excluído e estoque estornado",
+            "content": {
+              "application/json": {
+                "schema": { "type": "object", "properties": { "message": { "type": "string", "example": "Pedido excluído com sucesso." } } }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "500": { "$ref": "#/components/responses/ServerError" }
+        }
+      }
+    },
+
+    "/api/membros": {
+      "get": {
+        "tags": ["Membros"],
+        "summary": "Listar membros da equipe",
+        "description": "Retorna todos os membros cadastrados, ordenados por data de criação.",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Lista de membros",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/MembroResponse" }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "500": { "$ref": "#/components/responses/ServerError" }
+        }
+      },
+      "post": {
+        "tags": ["Membros"],
+        "summary": "Adicionar membro (admin)",
+        "description": "Cadastra um novo membro da equipe. **Requer perfil admin.**",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/MembroBody" },
+              "example": { "name": "Ana Souza", "role": "Front-end", "links": "https://github.com/ana" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Membro adicionado com sucesso",
+            "content": {
+              "application/json": {
+                "schema": { "type": "object", "properties": { "membro": { "$ref": "#/components/schemas/MembroResponse" } } }
+              }
+            }
+          },
+          "400": { "description": "Dados inválidos", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ValidationError" } } } },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "500": { "$ref": "#/components/responses/ServerError" }
+        }
+      }
+    },
+
+    "/api/membros/{id}": {
+      "put": {
+        "tags": ["Membros"],
+        "summary": "Editar membro (admin)",
+        "description": "Atualiza os dados de um membro da equipe. **Requer perfil admin.**",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "description": "ID do membro", "schema": { "type": "string" }, "example": "uuid-do-membro" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/MembroBody" },
+              "example": { "name": "Ana Souza", "role": "Full-stack", "links": "https://linkedin.com/in/ana" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Membro atualizado",
+            "content": {
+              "application/json": {
+                "schema": { "type": "object", "properties": { "membro": { "$ref": "#/components/schemas/MembroResponse" } } }
+              }
+            }
+          },
+          "400": { "description": "Dados inválidos", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ValidationError" } } } },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "500": { "$ref": "#/components/responses/ServerError" }
+        }
+      },
+      "delete": {
+        "tags": ["Membros"],
+        "summary": "Remover membro (admin)",
+        "description": "Remove um membro da equipe. **Requer perfil admin.**",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "description": "ID do membro", "schema": { "type": "string" }, "example": "uuid-do-membro" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Membro removido",
+            "content": {
+              "application/json": {
+                "schema": { "type": "object", "properties": { "mensagem": { "type": "string", "example": "Membro removido." } } }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "500": { "$ref": "#/components/responses/ServerError" }
+        }
+      }
+    },
+
+    "/api/dashboard": {
+      "get": {
+        "tags": ["Dashboard"],
+        "summary": "Obter estatísticas",
+        "description": "Retorna indicadores agregados: total de pedidos, confirmados, entregues e valor total do estoque.\n\n**Admin** recebe os dados globais do sistema. **Usuário comum** recebe apenas os seus dados.",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Estatísticas do sistema",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/DashboardResponse" }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "500": { "$ref": "#/components/responses/ServerError" }
+        }
+      }
+    },
+
+    "/api/auditoria": {
+      "get": {
+        "tags": ["Auditoria"],
+        "summary": "Listar logs de auditoria",
+        "description": "Retorna os últimos 200 registros de auditoria, ordenados do mais recente para o mais antigo.\n\n**Admin** visualiza todos os logs. **Usuário comum** visualiza apenas os seus.",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Lista de logs de auditoria",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/AuditoriaItem" }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "500": { "$ref": "#/components/responses/ServerError" }
+        }
+      }
+    }
+
+  }
+}
