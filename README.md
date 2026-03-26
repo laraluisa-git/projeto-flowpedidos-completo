@@ -279,7 +279,7 @@ Este acesso possui role `admin` e visualiza todos os pedidos, produtos e logs de
 
 | | URL |
 |---|---|
-| **Sistema** | [https://projeto-flowpedidos-frontend.vercel.app/](https://projeto-flowpedidos-frontend.vercel.app/) |
+| **Sistema** | https://projeto-flowpedidos.vercel.app/ |
 
 ---
 
